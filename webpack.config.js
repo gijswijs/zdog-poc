@@ -10,6 +10,7 @@ module.exports = {
   plugins: [
     new HtmlWebpackPlugin({
       title: "Zdog poc",
+      template: './src/index.html'
     }),
   ],
   devServer: {

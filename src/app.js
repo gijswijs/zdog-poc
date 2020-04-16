@@ -1,14 +1,26 @@
 import Zdog from "zdog/js"
-import component from "./component";
+import "bulma/css/bulma.css"
+import './styles/component.css'
 
-document.body.appendChild(component());
+const heightInput = document.getElementById("heightInput")
+const speedInput = document.getElementById("speedInput")
+const startBtn = document.getElementById("startBtn")
+const resetBtn = document.getElementById("resetBtn")
+const progressBar = document.getElementById("progressBar")
+// const pageX = document.getElementById("pageX")
+// const pageY = document.getElementById("pageY")
+
+let rotationTargetY = -0.3
+let rotationTargetX = -0.5
+let rotationStepY = 0
+let rotationStepX = 0
+let rotationSteps = 100
 
 let illo = new Zdog.Illustration({
-  element: '.zdog-canvas',
-  dragRotate: true,
+  element: '.zdog-canvas',  
   rotate: {
-    y: -0.3,
-    x: -0.5  
+    y: rotationTargetY,
+    x: rotationTargetX  
   }
 });
 
@@ -27,74 +39,135 @@ let spool0 = spool1.copy({
 });
 
 
-// function animate() {
-//   illo.updateRenderGraph();
-//   requestAnimationFrame( animate );
-// }
-
-// animate();
-
 // a tower of Hanoi with a number of 6 disks at the first stack
-let disks = new Array(4).fill(0)
-let stackHeight = disks.length
-let colors = ['#A57548','#BA1200','#F45866','#82DDF0','#5296A5','#C45AB3']
-// bottom diameter of the stack
-let diameter = 150
-// top diameter of the stack
-let topDiameter = 50
-// stack height
-let height = 300
-// relative difference of the top (thinner) and bottom (thicker) stroke compared to the average stroke
-let relativeDiff = 0.3
-// calculate bottom stroke
-let bottomStroke = (height / stackHeight) * (1 + relativeDiff)
-// calculate top stroke
-let topStroke = (height / stackHeight) * (1-relativeDiff)
-// calculate the difference for the strokes in between top and bottom
-let strokeStep = (bottomStroke - topStroke) / (stackHeight - 1)
-// calculate the difference for the diameter in between top and bottom
-let diameterStep = (diameter - topDiameter) / (stackHeight - 1)
+let disks = []
+
+// an array to hold all timeouts, so that they can be cleared on a reinit
+var timeouts = [];
+
 // create an empty array to hold the zdog ellipse objects
 let diskObjects = []
-// set the stroke for the first iteration
-let stroke = bottomStroke
+
 // set the bottom of the stack. The translation for each disk is calculated off this value
 let bottomTranslate = 200
 
-for (let i=0; i < stackHeight; i++) {
-
-  let translate = bottomTranslate - i * bottomStroke + ((((i*(i+1))/2)-i) * strokeStep) - (0.5 * stroke)
-  diskObjects.unshift(new Zdog.Ellipse({
-    addTo: spool0,
-    diameter: diameter,
-    stroke: stroke,
-    color: colors[i%colors.length],
-    rotate: { x: Zdog.TAU/4 },
-    translate: { y: translate }
-  }))
-
-  // diminish stroke and diameter
-  stroke -= strokeStep
-  diameter -= diameterStep 
-}
-
-illo.updateRenderGraph();
-
 // step counter
 let steps = 0
+
 // time between steps in the animation (ms)
 let stepTimer = 500
 
-// move the bottom disk to the third stack
-hanoi(disks, stackHeight-1, 2)
+init();
+
+resetBtn.addEventListener("click",init)
+speedInput.addEventListener("change",init)
+heightInput.addEventListener("change",init)
+document.body.addEventListener('mousemove',changeRotation)
+
+// start animation
+animate();
+
+// FUNCTIONS
+
+function startClick() {
+  hanoi(disks, disks.length-1, 2)
+  startBtn.removeEventListener("click",startClick)
+}
+
+function changeRotation(event) {
+  let pageXmax = 1200
+  let pageYmax = 800
+  let rotationXmax = 0.5
+  let rotationYmax = 1
+  let locX = event.pageX > pageXmax ? pageXmax : event.pageX
+  let locY = event.pageY > pageYmax ? pageYmax : event.pageY
+  locX = locX*2-pageXmax
+  locY = locY*2-pageYmax
+  rotationTargetY = locX/pageXmax * rotationYmax
+  rotationTargetX = locY/pageYmax * rotationXmax
+  rotationStepY = (rotationTargetY - illo.rotate.y) / rotationSteps
+  rotationStepX = (rotationTargetX - illo.rotate.x) / rotationSteps
+  // pageX.value = "step X:" + rotationStepX.toString() + " illo-x:" + illo.rotate.x.toString() + " target X:" + rotationTargetX.toString()
+  // pageY.value = "step Y:" + rotationStepY.toString() + " illo-y:" + illo.rotate.y.toString() + " target Y:" + rotationTargetY.toString()
+}
+
+function init() {
+  // set progress bar to 0%
+  progressBar.value = 0
+  // clear all timeouts (this only applies if this is a reinit)
+  timeouts.forEach(t => clearTimeout(t))
+  // remove all disks (this only applies if this is a reinit)
+  diskObjects.forEach(d => d.remove())
+  diskObjects = []
+  if (parseInt(heightInput.value) > 10) {
+    heightInput.value = "10"
+  }
+  if (parseInt(heightInput.value) < 1) {
+    heightInput.value = "1"
+  }
+  if (parseInt(speedInput.value) > 5000) {
+    speedInput.value = "5000"
+  }
+  if (parseInt(speedInput.value) < 100) {
+    speedInput.value = "100"
+  }
+  disks = new Array(parseInt(heightInput.value)).fill(0)
+  let colors = ['#A57548','#BA1200','#F45866','#82DDF0','#5296A5','#C45AB3']
+  // bottom diameter of the stack
+  let diameter = 150
+  // top diameter of the stack
+  let topDiameter = 50
+  // stack height
+  let height = 300
+  // relative difference of the top (thinner) and bottom (thicker) stroke compared to the average stroke
+  let relativeDiff = 0.3
+  // calculate bottom stroke
+  let bottomStroke = (height / disks.length) * (1 + relativeDiff)
+  // calculate top stroke
+  let topStroke = (height / disks.length) * (1-relativeDiff)
+  // calculate the difference for the strokes in between top and bottom
+  let strokeStep = (bottomStroke - topStroke) / (disks.length - 1)
+  // calculate the difference for the diameter in between top and bottom
+  let diameterStep = (diameter - topDiameter) / (disks.length - 1)
+  // set the stroke for the first iteration
+  let stroke = bottomStroke
+  // step counter
+  steps = 0
+  // time between steps in the animation (ms)
+  stepTimer = parseInt(speedInput.value)
+  
+  for (let i = 0; i < disks.length; i++) {
+    let translate = bottomTranslate - i * bottomStroke + ((((i * (i + 1)) / 2) - i) * strokeStep) - (0.5 * stroke);
+    diskObjects.unshift(new Zdog.Ellipse({
+      addTo: spool0,
+      diameter: diameter,
+      stroke: stroke,
+      color: colors[i % colors.length],
+      rotate: { x: Zdog.TAU / 4 },
+      translate: { y: translate }
+    }));
+    // diminish stroke and diameter
+    stroke -= strokeStep;
+    diameter -= diameterStep;
+  }
+  illo.updateRenderGraph();
+  startBtn.addEventListener("click",startClick)
+}
 
 function animate() {
+  if (Math.abs(illo.rotate.y - rotationStepY - rotationTargetY) > 0.01) {
+    illo.rotate.y += rotationStepY
+  }
+  if (Math.abs(illo.rotate.x - rotationStepX - rotationTargetX) > 0.01) {
+    illo.rotate.x += rotationStepX
+  }
+  // pageX.value = "step X:" + rotationStepX.toString() + " illo-x:" + illo.rotate.x.toString() + " target X:" + rotationTargetX.toString()
+  // pageY.value = "step Y:" + rotationStepY.toString() + " illo-y:" + illo.rotate.y.toString() + " target Y:" + rotationTargetY.toString()
+
   illo.updateRenderGraph();
   // animate next frame
   requestAnimationFrame( animate );
 }
-// start animation
-animate();
 
 function hanoi(disks, toMove, target) {
   // disks is an array with a length of the number of disks in the game.
@@ -115,7 +188,7 @@ function hanoi(disks, toMove, target) {
   disks[toMove] = target
   // update Zdog
   steps += 1
-  setTimeout(moveDisk,steps * stepTimer, diskObjects[toMove], target)
+  timeouts.push(setTimeout(moveDisk,steps * stepTimer, diskObjects[toMove], target, steps))
   
   // move the disk that's one smaller on top of it
   if (toMove > 0) {
@@ -123,8 +196,9 @@ function hanoi(disks, toMove, target) {
   }
 }
 
-function moveDisk(disk, to) {
+function moveDisk(disk, to, step) {
   // get the target spool
+  progressBar.value=step/(Math.pow(2,disks.length)-1)*100
   let spool = eval('spool' + to)
   // move the disk down as far as possible (on to the disks that are already on the spool)
 

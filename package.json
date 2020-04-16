@@ -12,6 +12,7 @@
   "author": "Gijs van Dam <gvandam@gmail.com> (https://github.com/gijswijs)",
   "license": "GPL3",
   "dependencies": {
+    "bulma": "^0.8.2",
     "zdog": "^1.1.2"
   },
   "devDependencies": {
