@@ -1,0 +1,6 @@
+.zdog-canvas {
+  display: block;
+  background: #FDB;
+  border-radius: 8px;
+  cursor: move;
+}
